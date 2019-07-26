@@ -11,6 +11,7 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.bridge.CatalystInstance;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.bridge.ReactApplicationContext;
 
 import com.clover.connector.sdk.v3.DisplayConnector;
 import com.clover.connector.sdk.v3.PaymentConnector;
@@ -87,7 +88,7 @@ public class PayInvoiceActivity extends ReactActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_example_pos);
+        // setContentView(R.layout.activity_example_pos);
 
         // Initialize the PaymentConnector with a listener
         final PaymentConnector paymentConnector = initializePaymentConnector();
@@ -99,8 +100,8 @@ public class PayInvoiceActivity extends ReactActivity {
     private PaymentConnector initializePaymentConnector() {
         // Get the Clover account that will be used with the service; uses the
         // GET_ACCOUNTS permission
-
         Account cloverAccount = CloverAccount.getAccount(PayInvoiceActivity.this);
+
         // Set your RAID as the remoteApplicationId
         // Set this in .env
         String remoteApplicationId = BuildConfig.RAID;
@@ -209,8 +210,13 @@ public class PayInvoiceActivity extends ReactActivity {
                 // return;
             }
         };
+
+        MainApplication application = (MainApplication) PayInvoiceActivity.this.getApplication();
+        ReactNativeHost reactNativeHost = application.getReactNativeHost();
+        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
+        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
         // Create the PaymentConnector with the context, account, listener, and RAID
-        return new PaymentConnector(PayInvoiceActivity.this, cloverAccount, paymentConnectorListener,
+        return new PaymentConnector(reactContext, cloverAccount, paymentConnectorListener,
                 remoteApplicationId);
     }
 

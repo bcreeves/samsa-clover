@@ -101,7 +101,6 @@ export default {
             );
         },
         onPressCustomer: function(item) {
-            this.customerName = "";
             this.$store
                 .dispatch("SET_CUSTOMER", {
                     customer: item
