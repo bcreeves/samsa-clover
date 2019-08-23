@@ -65,7 +65,7 @@
 
 <script>
 import { Button, Text } from "native-base";
-import PayInvoice from "./PayInvoice";
+import PayInvoice from "../native_modules/PayInvoice";
 import Config from "react-native-config";
 
 export default {

@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.annotation.CallSuper;
 import android.support.annotation.Nullable;
 import android.view.View;
+import android.widget.Button;
+import android.content.Context;
 
 import com.facebook.react.ReactActivity;
 import com.facebook.react.ReactInstanceManager;
@@ -13,6 +15,7 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.ReactApplicationContext;
 
+import com.clover.sdk.util.CloverAccount;
 import com.clover.connector.sdk.v3.DisplayConnector;
 import com.clover.connector.sdk.v3.PaymentConnector;
 import com.clover.sdk.v3.base.CardData;
@@ -48,13 +51,23 @@ import com.clover.sdk.v3.remotepay.VoidPaymentResponse;
 import com.clover.sdk.v3.remotepay.TipAdded;
 import com.clover.sdk.v3.remotepay.VoidPaymentResponse;
 import com.clover.sdk.v3.remotepay.VoidPaymentRefundResponse;
-import com.clover.sdk.util.CloverAccount;
-import com.clover.sdk.v3.connector.IPaymentConnector;
+// import com.clover.sdk.v3.connector.IPaymentConnector;
 import com.clover.sdk.v3.connector.IPaymentConnectorListener;
 import com.clover.sdk.v3.connector.ExternalIdUtils;
 import com.clover.sdk.v3.payments.Credit;
 import com.clover.sdk.v3.payments.Payment;
+import com.clover.sdk.v1.BindingException;
+import com.clover.sdk.v1.ClientException;
+import com.clover.sdk.v1.Intents;
+import com.clover.sdk.v1.ServiceException;
+import com.clover.sdk.v3.inventory.PriceType;
+import com.clover.sdk.v3.order.Order;
+import com.clover.sdk.v3.order.OrderConnector;
+import com.clover.sdk.v3.inventory.InventoryConnector;
+import com.clover.sdk.v3.inventory.Item;
+
 import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
@@ -79,28 +92,71 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import android.util.Log;
 
 public class PayInvoiceActivity extends ReactActivity {
+
+    private final String TAG = PayInvoiceActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // setContentView(R.layout.activity_example_pos);
+        setContentView(R.layout.activity_example_pos);
 
         // Initialize the PaymentConnector with a listener
         final PaymentConnector paymentConnector = initializePaymentConnector();
 
-        SaleRequest saleRequest = setupSaleRequest();
-        paymentConnector.sale(saleRequest);
+        Button saleButton = findViewById(R.id.pay_button);
+
+        // SaleRequest saleRequest = setupSaleRequest();
+        // paymentConnector.sale(saleRequest);
+
+        saleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Set up a SaleRequest
+                SaleRequest saleRequest = setupSaleRequest();
+                paymentConnector.sale(saleRequest);
+            }
+        });
     }
 
     private PaymentConnector initializePaymentConnector() {
+
+        // MainApplication application = (MainApplication)
+        // PayInvoiceActivity.this.getApplication();
+        // ReactNativeHost reactNativeHost = application.getReactNativeHost();
+        // ReactInstanceManager reactInstanceManager =
+        // reactNativeHost.getReactInstanceManager();
+        // ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+
         // Get the Clover account that will be used with the service; uses the
         // GET_ACCOUNTS permission
-        Account cloverAccount = CloverAccount.getAccount(PayInvoiceActivity.this);
+        Account cloverAccount = CloverAccount.getAccount(getApplicationContext());
+
+        // String CLOVER_ACCOUNT_TYPE = "com.clover.account";
+
+        Log.d(TAG, "cloverAccount: " + cloverAccount);
+
+        AccountManager mgr = (AccountManager) PayInvoiceActivity.this.getSystemService(Context.ACCOUNT_SERVICE);
+        Log.d(TAG, "Account Manager: " + mgr);
+
+        Account[] accounts = mgr.getAccountsByType("com.clover.account");
+        Log.d(TAG, "Accounts: " + accounts.toString());
+
+        Log.d(TAG, "Accounts Length: " + accounts.length);
+
+        // runOnUiThread(new Runnable() {
+        // @Override
+        // public void run() {
+        // ((TextView)
+        // findViewById(R.id.ConnectionStatusLabel)).setText(cloverAccount.toString());
+        // }
+        // });
 
         // Set your RAID as the remoteApplicationId
         // Set this in .env
@@ -119,104 +175,119 @@ public class PayInvoiceActivity extends ReactActivity {
                 Toast.makeText(PayInvoiceActivity.this, result, Toast.LENGTH_LONG).show();
             }
 
-            @Override
+            // @Override
             public void onPreAuthResponse(PreAuthResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onAuthResponse(AuthResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onTipAdjustAuthResponse(TipAdjustAuthResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onCapturePreAuthResponse(CapturePreAuthResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onVerifySignatureRequest(VerifySignatureRequest request) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onConfirmPaymentRequest(ConfirmPaymentRequest request) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onManualRefundResponse(ManualRefundResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onRefundPaymentResponse(RefundPaymentResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onTipAdded(TipAdded tipAdded) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onVoidPaymentResponse(VoidPaymentResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onVaultCardResponse(VaultCardResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onRetrievePendingPaymentsResponse(
                     RetrievePendingPaymentsResponse retrievePendingPaymentResponse) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onReadCardDataResponse(ReadCardDataResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onCloseoutResponse(CloseoutResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onRetrievePaymentResponse(RetrievePaymentResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onVoidPaymentRefundResponse(VoidPaymentRefundResponse response) {
                 // return;
             };
 
-            @Override
+            // @Override
             public void onDeviceConnected() {
-                // return;
+                Toast.makeText(PayInvoiceActivity.this, "Connected!", Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ((TextView) findViewById(R.id.ConnectionStatusLabel)).setText("Connected!");
+                    }
+                });
             }
 
-            @Override
+            // @Override
             public void onDeviceDisconnected() {
-                // return;
+                Toast.makeText(PayInvoiceActivity.this, "Disconnected!", Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ((TextView) findViewById(R.id.ConnectionStatusLabel)).setText("Disconnected");
+                    }
+                });
+
             }
         };
 
-        MainApplication application = (MainApplication) PayInvoiceActivity.this.getApplication();
-        ReactNativeHost reactNativeHost = application.getReactNativeHost();
-        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
-        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+        // MainApplication application = (MainApplication)
+        // PayInvoiceActivity.this.getApplication();
+        // ReactNativeHost reactNativeHost = application.getReactNativeHost();
+        // ReactInstanceManager reactInstanceManager =
+        // reactNativeHost.getReactInstanceManager();
+        // ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
         // Create the PaymentConnector with the context, account, listener, and RAID
-        return new PaymentConnector(reactContext, cloverAccount, paymentConnectorListener,
+        return new PaymentConnector(PayInvoiceActivity.this, cloverAccount, paymentConnectorListener,
                 remoteApplicationId);
     }
 

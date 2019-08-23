@@ -31,4 +31,6 @@
   <dimen name="home_button_margin_minimobile">10sp</dimen>
   <dimen name="home_button_margin_station">10dp</dimen>
   <dimen name="home_button_margin_goldenoak">15sp</dimen>
+
+  <dimen name="fab_margin">16dp</dimen>
 </resources>

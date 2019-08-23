@@ -46,7 +46,7 @@
             </view>
         </nb-content>
     </nb-container>
-</template>
+</template> 
 
 <script>
 import React from "react";

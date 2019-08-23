@@ -16,7 +16,7 @@
         </nb-header>
         <nb-content :style="{flex: 1, backgroundColor: '#ddd'}">
             <view class="home-content">
-                <nb-button iconRight :onPress="() => payInvoice(invoice)" :style="{alignSelf: 'flex-end'}">
+                <nb-button iconRight :onPress="() => payInvoice()" :style="{alignSelf: 'flex-end'}">
                     <nb-text>Test Payment</nb-text>
                     <nb-icon name="arrow-forward" />
                 </nb-button>
@@ -28,7 +28,7 @@
 <script>
 import { Button, Text } from "native-base";
 import store from "../store";
-import PayInvoice from "../PayInvoice";
+import PayInvoice from "../native_modules/PayInvoice";
 
 export default {
     props: {

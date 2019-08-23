@@ -223,4 +223,8 @@
 
   <item type="id" name="button_exit"/>
 
+  <string name="connection_successful">Connection Successful!!!</string>
+  <string name="make_sale">Make Sale</string>
+  <string name="title_activity_main2">Main2Activity</string>
+
 </resources>
