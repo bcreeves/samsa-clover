@@ -1,61 +1,18 @@
 package com.cloverappvue;
 
+import android.accounts.Account;
+import android.app.Activity;
+import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.annotation.CallSuper;
-import android.support.annotation.Nullable;
+import android.os.RemoteException;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 import android.content.Context;
-
-import com.facebook.react.ReactActivity;
-import com.facebook.react.ReactInstanceManager;
-import com.facebook.react.ReactNativeHost;
-import com.facebook.react.bridge.CatalystInstance;
-import com.facebook.react.bridge.ReactContext;
-import com.facebook.react.bridge.WritableNativeArray;
-import com.facebook.react.bridge.ReactApplicationContext;
+import android.util.Log;
 
 import com.clover.sdk.util.CloverAccount;
-import com.clover.connector.sdk.v3.DisplayConnector;
-import com.clover.connector.sdk.v3.PaymentConnector;
-import com.clover.sdk.v3.base.CardData;
-import com.clover.sdk.v3.base.Challenge;
-import com.clover.sdk.v3.connector.IDisplayConnector;
-import com.clover.sdk.v3.connector.IDisplayConnectorListener;
-import com.clover.sdk.v3.payments.CardTransaction;
-import com.clover.sdk.v3.payments.CardType;
-import com.clover.sdk.v3.payments.Result;
-import com.clover.sdk.v3.remotepay.AuthResponse;
-import com.clover.sdk.v3.remotepay.CapturePreAuthResponse;
-import com.clover.sdk.v3.remotepay.CloseoutRequest;
-import com.clover.sdk.v3.remotepay.CloseoutResponse;
-import com.clover.sdk.v3.remotepay.ConfirmPaymentRequest;
-import com.clover.sdk.v3.remotepay.ManualRefundRequest;
-import com.clover.sdk.v3.remotepay.ManualRefundResponse;
-import com.clover.sdk.v3.remotepay.PaymentResponse;
-import com.clover.sdk.v3.remotepay.PreAuthRequest;
-import com.clover.sdk.v3.remotepay.PreAuthResponse;
-import com.clover.sdk.v3.remotepay.ReadCardDataRequest;
-import com.clover.sdk.v3.remotepay.ReadCardDataResponse;
-import com.clover.sdk.v3.remotepay.RefundPaymentResponse;
-import com.clover.sdk.v3.remotepay.ResponseCode;
-import com.clover.sdk.v3.remotepay.RetrievePaymentRequest;
-import com.clover.sdk.v3.remotepay.RetrievePaymentResponse;
-import com.clover.sdk.v3.remotepay.RetrievePendingPaymentsResponse;
-import com.clover.sdk.v3.remotepay.SaleRequest;
-import com.clover.sdk.v3.remotepay.SaleResponse;
-import com.clover.sdk.v3.remotepay.TipAdjustAuthResponse;
-import com.clover.sdk.v3.remotepay.VaultCardResponse;
-import com.clover.sdk.v3.remotepay.VerifySignatureRequest;
-import com.clover.sdk.v3.remotepay.VoidPaymentResponse;
-import com.clover.sdk.v3.remotepay.TipAdded;
-import com.clover.sdk.v3.remotepay.VoidPaymentResponse;
-import com.clover.sdk.v3.remotepay.VoidPaymentRefundResponse;
-// import com.clover.sdk.v3.connector.IPaymentConnector;
-import com.clover.sdk.v3.connector.IPaymentConnectorListener;
-import com.clover.sdk.v3.connector.ExternalIdUtils;
-import com.clover.sdk.v3.payments.Credit;
-import com.clover.sdk.v3.payments.Payment;
 import com.clover.sdk.v1.BindingException;
 import com.clover.sdk.v1.ClientException;
 import com.clover.sdk.v1.Intents;
@@ -66,237 +23,176 @@ import com.clover.sdk.v3.order.OrderConnector;
 import com.clover.sdk.v3.inventory.InventoryConnector;
 import com.clover.sdk.v3.inventory.Item;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
-import android.content.DialogInterface;
-import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.SystemClock;
-import android.preference.PreferenceManager;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
+import java.util.List;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
-import android.util.Log;
+import com.facebook.react.ReactActivity;
+import com.facebook.react.ReactInstanceManager;
+import com.facebook.react.ReactNativeHost;
+import com.facebook.react.bridge.CatalystInstance;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
 
-public class PayInvoiceActivity extends ReactActivity {
+public class PayInvoiceActivity extends Activity {
 
-    private final String TAG = PayInvoiceActivity.class.getSimpleName();
+    private Account account;
+    private OrderConnector orderConnector;
+    private InventoryConnector inventoryConnector;
+    private Order order;
+    private Button payButton;
+    private Button payWithAutoLogout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_example_pos);
+        setContentView(R.layout.activity_main);
+    }
 
-        // Initialize the PaymentConnector with a listener
-        final PaymentConnector paymentConnector = initializePaymentConnector();
+    @Override
+    protected void onResume() {
+        super.onResume();
 
-        Button saleButton = findViewById(R.id.pay_button);
+        MainApplication application = (MainApplication) PayInvoiceActivity.this.getApplication();
+        ReactNativeHost reactNativeHost = application.getReactNativeHost();
+        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
+        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+        
+        // Retrieve the Clover account
+        if (account == null) {
 
-        // SaleRequest saleRequest = setupSaleRequest();
-        // paymentConnector.sale(saleRequest);
+            // Log.d("PayInvoiceActivity.java", "reactContext: " + this);
+            
+            account = CloverAccount.getAccount(PayInvoiceActivity.this);
 
-        saleButton.setOnClickListener(new View.OnClickListener() {
+            // If an account can't be acquired, exit the app
+            if (account == null) {
+                Toast.makeText(this, getString(R.string.no_account), Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+        }
+
+        // Create and Connect
+        connect();
+
+        payButton = (Button) findViewById(R.id.pay_button);
+        payButton.setEnabled(false);
+
+        payWithAutoLogout = (Button) findViewById(R.id.pay_auto_logout);
+        payWithAutoLogout.setEnabled(false);
+
+        // create order
+        new OrderAsyncTask().execute();
+
+        payButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Set up a SaleRequest
-                SaleRequest saleRequest = setupSaleRequest();
-                paymentConnector.sale(saleRequest);
+                startRegisterIntent(false);
+            }
+        });
+
+        payWithAutoLogout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startRegisterIntent(true);
             }
         });
     }
 
-    private PaymentConnector initializePaymentConnector() {
+    // Start intent to launch Clover's register pay activity.
+    // If true is passed in, register will honor the auto-logout setting value.
+    private void startRegisterIntent(boolean autoLogout) {
+        Intent intent = new Intent(Intents.ACTION_CLOVER_PAY);
+        intent.putExtra(Intents.EXTRA_CLOVER_ORDER_ID, order.getId());
+        intent.putExtra(Intents.EXTRA_OBEY_AUTO_LOGOUT, autoLogout);
+        startActivity(intent);
+    }
 
-        // MainApplication application = (MainApplication)
-        // PayInvoiceActivity.this.getApplication();
-        // ReactNativeHost reactNativeHost = application.getReactNativeHost();
-        // ReactInstanceManager reactInstanceManager =
-        // reactNativeHost.getReactInstanceManager();
-        // ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+    @Override
+    protected void onPause() {
+        disconnect();
+        super.onPause();
+    }
 
-        // Get the Clover account that will be used with the service; uses the
-        // GET_ACCOUNTS permission
-        Account cloverAccount = CloverAccount.getAccount(getApplicationContext());
+    // Establishes a connection with the connectors
+    private void connect() {
+        disconnect();
+        if (account != null) {
+            orderConnector = new OrderConnector(this, account, null);
+            orderConnector.connect();
+            inventoryConnector = new InventoryConnector(this, account, null);
+            inventoryConnector.connect();
+        }
+    }
 
-        // String CLOVER_ACCOUNT_TYPE = "com.clover.account";
+    // Disconnects from the connectors
+    private void disconnect() {
+        if (orderConnector != null) {
+            orderConnector.disconnect();
+            orderConnector = null;
+        }
+        if (inventoryConnector != null) {
+            inventoryConnector.disconnect();
+            inventoryConnector = null;
+        }
+    }
 
-        Log.d(TAG, "cloverAccount: " + cloverAccount);
+    // Creates a new order w/ the first inventory item
+    private class OrderAsyncTask extends AsyncTask<Void, Void, Order> {
 
-        AccountManager mgr = (AccountManager) PayInvoiceActivity.this.getSystemService(Context.ACCOUNT_SERVICE);
-        Log.d(TAG, "Account Manager: " + mgr);
-
-        Account[] accounts = mgr.getAccountsByType("com.clover.account");
-        Log.d(TAG, "Accounts: " + accounts.toString());
-
-        Log.d(TAG, "Accounts Length: " + accounts.length);
-
-        // runOnUiThread(new Runnable() {
-        // @Override
-        // public void run() {
-        // ((TextView)
-        // findViewById(R.id.ConnectionStatusLabel)).setText(cloverAccount.toString());
-        // }
-        // });
-
-        // Set your RAID as the remoteApplicationId
-        // Set this in .env
-        String remoteApplicationId = BuildConfig.RAID;
-
-        // Implement the interface
-        IPaymentConnectorListener paymentConnectorListener = new IPaymentConnectorListener() {
-            @Override
-            public void onSaleResponse(SaleResponse response) {
-                String result;
-                if (response.getSuccess()) {
-                    result = "Sale was successful";
-                } else {
-                    result = "Sale was unsuccessful" + response.getReason() + ":" + response.getMessage();
+        @Override
+        protected final Order doInBackground(Void... params) {
+            Order mOrder;
+            List<Item> merchantItems;
+            Item mItem;
+            try {
+                // Create a new order
+                mOrder = orderConnector.createOrder(new Order());
+                // Grab the items from the merchant's inventory
+                merchantItems = inventoryConnector.getItems();
+                // If there are no item's in the merchant's inventory, then call a toast and
+                // return null
+                if (merchantItems.isEmpty()) {
+                    Toast.makeText(getApplicationContext(), getString(R.string.empty_inventory), Toast.LENGTH_SHORT)
+                            .show();
+                    finish();
+                    return null;
                 }
-                Toast.makeText(PayInvoiceActivity.this, result, Toast.LENGTH_LONG).show();
+                // Taking the first item from the inventory
+                mItem = merchantItems.get(0);
+                // Add this item to the order, must add using its PriceType
+                if (mItem.getPriceType() == PriceType.FIXED) {
+                    orderConnector.addFixedPriceLineItem(mOrder.getId(), mItem.getId(), null, null);
+                } else if (mItem.getPriceType() == PriceType.PER_UNIT) {
+                    orderConnector.addPerUnitLineItem(mOrder.getId(), mItem.getId(), 1, null, null);
+                } else { // The item must be of a VARIABLE PriceType
+                    orderConnector.addVariablePriceLineItem(mOrder.getId(), mItem.getId(), 27, null, null);
+                }
+                return mOrder;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (ClientException e) {
+                e.printStackTrace();
+            } catch (ServiceException e) {
+                e.printStackTrace();
+            } catch (BindingException e) {
+                e.printStackTrace();
             }
+            return null;
+        }
 
-            // @Override
-            public void onPreAuthResponse(PreAuthResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onAuthResponse(AuthResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onTipAdjustAuthResponse(TipAdjustAuthResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onCapturePreAuthResponse(CapturePreAuthResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onVerifySignatureRequest(VerifySignatureRequest request) {
-                // return;
-            };
-
-            // @Override
-            public void onConfirmPaymentRequest(ConfirmPaymentRequest request) {
-                // return;
-            };
-
-            // @Override
-            public void onManualRefundResponse(ManualRefundResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onRefundPaymentResponse(RefundPaymentResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onTipAdded(TipAdded tipAdded) {
-                // return;
-            };
-
-            // @Override
-            public void onVoidPaymentResponse(VoidPaymentResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onVaultCardResponse(VaultCardResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onRetrievePendingPaymentsResponse(
-                    RetrievePendingPaymentsResponse retrievePendingPaymentResponse) {
-                // return;
-            };
-
-            // @Override
-            public void onReadCardDataResponse(ReadCardDataResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onCloseoutResponse(CloseoutResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onRetrievePaymentResponse(RetrievePaymentResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onVoidPaymentRefundResponse(VoidPaymentRefundResponse response) {
-                // return;
-            };
-
-            // @Override
-            public void onDeviceConnected() {
-                Toast.makeText(PayInvoiceActivity.this, "Connected!", Toast.LENGTH_SHORT).show();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ((TextView) findViewById(R.id.ConnectionStatusLabel)).setText("Connected!");
-                    }
-                });
+        @Override
+        protected final void onPostExecute(Order order) {
+            // Enables the pay buttons if the order is valid
+            if (!isFinishing()) {
+                PayInvoiceActivity.this.order = order;
+                if (order != null) {
+                    payButton.setEnabled(true);
+                    payWithAutoLogout.setEnabled(true);
+                }
             }
-
-            // @Override
-            public void onDeviceDisconnected() {
-                Toast.makeText(PayInvoiceActivity.this, "Disconnected!", Toast.LENGTH_SHORT).show();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ((TextView) findViewById(R.id.ConnectionStatusLabel)).setText("Disconnected");
-                    }
-                });
-
-            }
-        };
-
-        // MainApplication application = (MainApplication)
-        // PayInvoiceActivity.this.getApplication();
-        // ReactNativeHost reactNativeHost = application.getReactNativeHost();
-        // ReactInstanceManager reactInstanceManager =
-        // reactNativeHost.getReactInstanceManager();
-        // ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
-        // Create the PaymentConnector with the context, account, listener, and RAID
-        return new PaymentConnector(PayInvoiceActivity.this, cloverAccount, paymentConnectorListener,
-                remoteApplicationId);
+        }
     }
 
-    private SaleRequest setupSaleRequest() {
-        // Create a new SaleRequest and populate the required request fields
-        SaleRequest saleRequest = new SaleRequest();
-        saleRequest.setExternalId(ExternalIdUtils.generateNewID()); // required, but can be any string
-        saleRequest.setAmount(1000L);
-
-        return saleRequest;
-    }
 }

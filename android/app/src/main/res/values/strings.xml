@@ -108,7 +108,6 @@
   <string name="new_text">New Text</string>
   <string name="new_order">New Order</string>
   <string name="no">No</string>
-  <string name="no_account">There is no Clover account.</string>
   <string name="no_pending_payments">There are no Pending Payments</string>
   <string name="no_discount">No Discount</string>
   <string name="non_blocking">Non-Blocking</string>
@@ -211,6 +210,12 @@
   <string name="would_you_like_to_tip">Would you like to provide a tip?</string>
   <string name="x">X</string>
   <string name="yes">Yes</string>
+
+  <string name="no_account">There is no Clover account.</string>
+
+  <string name="pay_auto_logout">Pay obeying auto logout</string>
+
+  <string name="empty_inventory">Please add an item to the inventory before attempting to take orders.</string>
 
   <string-array name="pref_protocol_list_titles">
     <item>WS</item>
