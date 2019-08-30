@@ -7,12 +7,14 @@
     "test": "jest"
   },
   "dependencies": {
+    "events": "^3.0.0",
     "lodash": "^4.17.15",
     "native-base": "2.12.1",
     "react": "16.8.3",
     "react-native": "0.59.8",
     "react-native-config": "^0.11.7",
     "react-native-pay-invoice": "../PayInvoice",
+    "remote-pay-cloud": "^3.1.0",
     "vue-native-core": "0.0.8",
     "vue-native-helper": "0.0.11",
     "vue-native-router": "0.0.1-alpha.3",

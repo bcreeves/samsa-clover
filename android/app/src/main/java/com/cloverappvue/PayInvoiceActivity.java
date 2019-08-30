@@ -34,7 +34,7 @@ import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 
-public class PayInvoiceActivity extends Activity {
+public class PayInvoiceActivity extends ReactActivity {
 
     private Account account;
     private OrderConnector orderConnector;
@@ -64,6 +64,7 @@ public class PayInvoiceActivity extends Activity {
             // Log.d("PayInvoiceActivity.java", "reactContext: " + this);
             
             account = CloverAccount.getAccount(PayInvoiceActivity.this);
+            Log.d("PayInvoiceActivity.java", "account: " + account);
 
             // If an account can't be acquired, exit the app
             if (account == null) {
@@ -121,6 +122,7 @@ public class PayInvoiceActivity extends Activity {
         if (account != null) {
             orderConnector = new OrderConnector(this, account, null);
             orderConnector.connect();
+            
             inventoryConnector = new InventoryConnector(this, account, null);
             inventoryConnector.connect();
         }
