@@ -58,7 +58,13 @@
                     </nb-button>
                 </nb-col>
             </nb-row>
-            <nb-row :style="{flexGrow: 1}"></nb-row>
+            <nb-row>
+                <nb-text></nb-text>
+            </nb-row>
+            <nb-row v-if="!invoices.length">
+                <nb-text>No Invoices</nb-text>
+            </nb-row>
+            <!-- <nb-row :style="{flexGrow: 1}"></nb-row> -->
         </nb-grid>
     </nb-container>
 </template>
@@ -67,6 +73,7 @@
 import { Button, Text } from "native-base";
 import PayInvoice from "../native_modules/PayInvoice";
 import Config from "react-native-config";
+import { AppState } from "react-native";
 
 export default {
     props: {
@@ -74,9 +81,16 @@ export default {
             type: Object
         }
     },
+    data: {
+        state: {
+            appState: AppState.currentState
+        }
+    },
     created: function() {
         this.getOpenInvoices();
+        // console.log(this.invoices);
     },
+    mounted: function() {},
     methods: {
         getOpenInvoices: function() {
             fetch(
@@ -106,8 +120,24 @@ export default {
                     invoice: item
                 })
                 .then(() => {
-                    // this.navigation.navigate("ViewInvoice");
-                    PayInvoice.makePayment();
+                    let amount =
+                        this.$store.state.invoice.BalanceRemaining * 100;
+                    let makePayment = async amount => {
+                        try {
+                            var msg = await PayInvoice.makePayment(amount);
+                            if (msg == "RESULT_OK") {
+                                console.log("Success: " + msg);
+                                //
+                            }
+                            if (msg == "RESULT_CANCELED") {
+                                console.log("ERROR: " + msg);
+                            }
+                        } catch (e) {
+                            console.error("ERROR: " + e);
+                        }
+                        this.getOpenInvoices();
+                    };
+                    makePayment(amount);
                 });
         }
     },

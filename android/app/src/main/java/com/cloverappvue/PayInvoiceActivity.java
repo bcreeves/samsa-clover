@@ -20,52 +20,26 @@ import com.clover.sdk.v1.ServiceException;
 import com.clover.sdk.v3.inventory.PriceType;
 import com.clover.sdk.v3.order.Order;
 import com.clover.sdk.v3.order.OrderConnector;
-import com.clover.sdk.v3.inventory.InventoryConnector;
 import com.clover.sdk.v3.inventory.Item;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import com.facebook.react.ReactActivity;
-import com.facebook.react.ReactInstanceManager;
-import com.facebook.react.ReactNativeHost;
-import com.facebook.react.bridge.CatalystInstance;
-import com.facebook.react.bridge.ReactContext;
-import com.facebook.react.bridge.WritableNativeArray;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-
-public class PayInvoiceActivity extends ReactActivity {
+public class PayInvoiceActivity extends Activity {
 
     private Account account;
     private OrderConnector orderConnector;
-    private InventoryConnector inventoryConnector;
     private Order order;
-    private Button payButton;
-    private Button payWithAutoLogout;
+
+    static final int REGISTER_ACTIVITY_REQUEST = 5694;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        MainApplication application = (MainApplication) PayInvoiceActivity.this.getApplication();
-        ReactNativeHost reactNativeHost = application.getReactNativeHost();
-        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
-        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
-        
         // Retrieve the Clover account
         if (account == null) {
-
-            // Log.d("PayInvoiceActivity.java", "reactContext: " + this);
-            
             account = CloverAccount.getAccount(PayInvoiceActivity.this);
-            Log.d("PayInvoiceActivity.java", "account: " + account);
-
             // If an account can't be acquired, exit the app
             if (account == null) {
                 Toast.makeText(this, getString(R.string.no_account), Toast.LENGTH_SHORT).show();
@@ -77,37 +51,33 @@ public class PayInvoiceActivity extends ReactActivity {
         // Create and Connect
         connect();
 
-        payButton = (Button) findViewById(R.id.pay_button);
-        payButton.setEnabled(false);
-
-        payWithAutoLogout = (Button) findViewById(R.id.pay_auto_logout);
-        payWithAutoLogout.setEnabled(false);
-
         // create order
         new OrderAsyncTask().execute();
+    }
 
-        payButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startRegisterIntent(false);
-            }
-        });
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Get response from Register Activity and send to React Module
+        if (requestCode == REGISTER_ACTIVITY_REQUEST) {
+            // Log.d("PayInvoiceActivity.java", data.toString());
 
-        payWithAutoLogout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startRegisterIntent(true);
+            Intent output = new Intent();
+            if (resultCode == Activity.RESULT_OK) {
+                setResult(Activity.RESULT_OK, output);
             }
-        });
+            if (resultCode == Activity.RESULT_CANCELED) {
+                setResult(Activity.RESULT_CANCELED, output);
+            }
+        }
+        // End activity
+        finish();
     }
 
     // Start intent to launch Clover's register pay activity.
-    // If true is passed in, register will honor the auto-logout setting value.
-    private void startRegisterIntent(boolean autoLogout) {
+    private void startRegisterIntent() {
         Intent intent = new Intent(Intents.ACTION_CLOVER_PAY);
         intent.putExtra(Intents.EXTRA_CLOVER_ORDER_ID, order.getId());
-        intent.putExtra(Intents.EXTRA_OBEY_AUTO_LOGOUT, autoLogout);
-        startActivity(intent);
+        startActivityForResult(intent, REGISTER_ACTIVITY_REQUEST);
     }
 
     @Override
@@ -122,9 +92,6 @@ public class PayInvoiceActivity extends ReactActivity {
         if (account != null) {
             orderConnector = new OrderConnector(this, account, null);
             orderConnector.connect();
-            
-            inventoryConnector = new InventoryConnector(this, account, null);
-            inventoryConnector.connect();
         }
     }
 
@@ -134,13 +101,9 @@ public class PayInvoiceActivity extends ReactActivity {
             orderConnector.disconnect();
             orderConnector = null;
         }
-        if (inventoryConnector != null) {
-            inventoryConnector.disconnect();
-            inventoryConnector = null;
-        }
     }
 
-    // Creates a new order w/ the first inventory item
+    // Creates a new order w/ hardcoded inventory item
     private class OrderAsyncTask extends AsyncTask<Void, Void, Order> {
 
         @Override
@@ -148,29 +111,12 @@ public class PayInvoiceActivity extends ReactActivity {
             Order mOrder;
             List<Item> merchantItems;
             Item mItem;
+            Intent mIntent = getIntent();
+            Integer balanceRemaining = mIntent.getIntExtra("balanceRemaining", 0);
             try {
                 // Create a new order
                 mOrder = orderConnector.createOrder(new Order());
-                // Grab the items from the merchant's inventory
-                merchantItems = inventoryConnector.getItems();
-                // If there are no item's in the merchant's inventory, then call a toast and
-                // return null
-                if (merchantItems.isEmpty()) {
-                    Toast.makeText(getApplicationContext(), getString(R.string.empty_inventory), Toast.LENGTH_SHORT)
-                            .show();
-                    finish();
-                    return null;
-                }
-                // Taking the first item from the inventory
-                mItem = merchantItems.get(0);
-                // Add this item to the order, must add using its PriceType
-                if (mItem.getPriceType() == PriceType.FIXED) {
-                    orderConnector.addFixedPriceLineItem(mOrder.getId(), mItem.getId(), null, null);
-                } else if (mItem.getPriceType() == PriceType.PER_UNIT) {
-                    orderConnector.addPerUnitLineItem(mOrder.getId(), mItem.getId(), 1, null, null);
-                } else { // The item must be of a VARIABLE PriceType
-                    orderConnector.addVariablePriceLineItem(mOrder.getId(), mItem.getId(), 27, null, null);
-                }
+                orderConnector.addVariablePriceLineItem(mOrder.getId(), "P5J8R5VCB98ZC", balanceRemaining, "Custom Name", null);
                 return mOrder;
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -186,15 +132,13 @@ public class PayInvoiceActivity extends ReactActivity {
 
         @Override
         protected final void onPostExecute(Order order) {
-            // Enables the pay buttons if the order is valid
+            // Starts register intent if order is valid
             if (!isFinishing()) {
                 PayInvoiceActivity.this.order = order;
                 if (order != null) {
-                    payButton.setEnabled(true);
-                    payWithAutoLogout.setEnabled(true);
+                    startRegisterIntent();
                 }
             }
         }
     }
-
 }
